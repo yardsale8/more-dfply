@@ -6,6 +6,8 @@ authors = ["Todd Iverson <tiverson@winona.edu>"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
+dfply = "^0.3.3"
+composable = "^0.2.5"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
