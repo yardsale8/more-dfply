@@ -171,17 +171,17 @@ def coalesce(*args):
  
     
 
-def ifelse_and_coalesce(args, apply_first=identity):
-    return coalesce(*[apply_first(ifelse(c, t, np.nan)) for c, t in args])
+def ifelse_and_coalesce(args, apply_first=identity, default=np.nan):
+    return coalesce(*[apply_first(ifelse(c, t, default)) for c, t in args])
 
 
 @pipeable
-def eval_and_case_when(args, df):
+def eval_and_case_when(args, df, default=np.nan):
     return ifelse_and_coalesce(args, apply_first=maybe_eval(df))
 
 
-def case_when(*args):
-    return Intention(eval_and_case_when(args)) if any_intention(args) else ifelse_and_coalesce(args)
+def case_when(*args, default=np.nan):
+    return Intention(eval_and_case_when(args, default=default)) if any_intention(args) else ifelse_and_coalesce(args, default=default)
 
 
 @make_symbolic
