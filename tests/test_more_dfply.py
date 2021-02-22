@@ -236,21 +236,6 @@ def test_case_when():
                                  (X.cat == 'b', X.val + 2), 
                                  (X.cat == 'c', X.val + 3)).evaluate(df), 
                        o3)
-    o1 = pd.Series([2, 3] + 7*[None])
-    o2 = pd.Series([2, 3, 3, 4, 5] + 4*[None])
-    o3 = pd.Series([2, 3, 3, 4, 5, 4, 5] + 2*[None]) 
-    assert equal_or_na(case_when((df.cat == 'a', df.val + 1), 
-                                  default=None), 
-                       o1)
-    assert equal_or_na(case_when((df.cat == 'a',  df.val + 1), 
-                                 (df.cat == 'b', df.val + 2), 
-                                  default=None), 
-                       o2)
-    assert equal_or_na(case_when((df.cat == 'a', df.val + 1), 
-                                 (df.cat == 'b', df.val + 2), 
-                                 (df.cat == 'c', df.val + 3), 
-                                  default=None), 
-                       o3) 
 
 
 

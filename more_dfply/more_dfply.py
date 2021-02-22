@@ -103,6 +103,13 @@ def row_index_slice(df, *args):
     else:
         return df.loc[args[0]:args[1]]
     
+def get_length(col):
+    if (isinstance(col, str) # Treat strings as singletons
+        or not hasattr(col, '__len__') # Other singletons
+       ):
+        return 1
+    else:
+        return len(col)
 
 @pipeable
 def maybe_tile(n, col):
@@ -171,17 +178,34 @@ def coalesce(*args):
  
     
 
-def ifelse_and_coalesce(args, apply_first=identity, default=np.nan):
-    return coalesce(*[apply_first(ifelse(c, t, default)) for c, t in args])
+# def ifelse_and_coalesce(args, apply_first=identity, default=np.nan):
+#     return coalesce(*[apply_first(ifelse(c, t, default)) for c, t in args])
 
 
 @pipeable
-def eval_and_case_when(args, df, default=np.nan):
+def eval_and_case_when(args, df):
     return ifelse_and_coalesce(args, apply_first=maybe_eval(df))
 
+def get_RHS(c, t, n, apply_first=identity):
+    case = apply_first(c)
+    then = apply_first(t)
+    if isinstance(c, bool) and c:
+        return maybe_tile(n, then)
+    elif isinstance(c, bool):
+        return maybe_tile(n, np.nan)
+    else:
+        return ifelse(case, then, np.nan)
+
+def ifelse_and_coalesce(args, apply_first=identity):
+    lengths = ([get_length(apply_first(t)) for c, t in args] 
+                  + [get_length(apply_first(c)) for c, t in args])
+    n = max(lengths)
+    assert all(l == 1 or l == n for l in lengths), "All LHS and RHS need to be singletons or the same length."
+    rhs = [get_RHS(c, t, n, apply_first=apply_first) for c, t in args]
+    return coalesce(*rhs)
 
 def case_when(*args, default=np.nan):
-    return Intention(eval_and_case_when(args, default=default)) if any_intention(args) else ifelse_and_coalesce(args, default=default)
+    return Intention(eval_and_case_when(args)) if any_intention(args) else ifelse_and_coalesce(args)
 
 
 @make_symbolic
