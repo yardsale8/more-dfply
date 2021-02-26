@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dfply import make_symbolic, pipe, symbolic_evaluation, Intention, dfpipe, rename, flatten, X
+from dfply.base import Intention as DfplyIntention
 import pandas as pd
 import numpy as np
 import re
@@ -129,10 +130,12 @@ def maybe_eval(df, col):
     return col.evaluate(df) if isinstance(col, Intention) else col
 
 
+def is_intension(val):
+    return isinstance(o, Intention) or isinstance(o, DfplyIntention)
 
 def any_intention(*args): 
     """Flattens args and checks for Intentions"""
-    return any(isinstance(o, Intention) for o in flatten(args))
+    return any(is_intension(o) for o in flatten(args))
 
 
 def tiled_where(cond, then, else_):
