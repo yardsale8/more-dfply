@@ -127,11 +127,8 @@ def maybe_tile(n, col):
 @pipeable
 def maybe_eval(df, col): 
     """ Evaluate col with df context whenever col is an Intention"""
-    return col.evaluate(df) if isinstance(col, Intention) else col
+    return col.evaluate(df) if hasattr(col, 'evaluate') else col
 
-
-def is_intension(val):
-    return isinstance(o, Intention) or isinstance(o, DfplyIntention)
 
 def any_intention(*args): 
     """Flattens args and checks for Intentions"""
