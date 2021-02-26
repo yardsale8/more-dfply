@@ -135,7 +135,7 @@ def is_intension(val):
 
 def any_intention(*args): 
     """Flattens args and checks for Intentions"""
-    return any(is_intension(o) for o in flatten(args))
+    return any(hasattr(o, 'evaluate') for o in flatten(args))
 
 
 def tiled_where(cond, then, else_):
