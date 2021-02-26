@@ -1,5 +1,6 @@
 from dfply import symbolic_evaluation
 from more_itertools import flatten
+from composable import pipeable
 
 @symbolic_evaluation
 def text_filter(col, pattern, *, case=False, regex=False, na=False):
@@ -36,3 +37,21 @@ def get_text_facets(col):
 def text_facet(col, *args):
     labels = [s for s in args if isinstance(s, str)] + [v for l in args if not isinstance(l, str) for v in l if isinstance(v, str)]
     return col.isin(labels) 
+
+
+@pipeable
+def _between(from_, to, val):
+    return (from_ == 'min' or val >= from_) and (to == 'max' or val <= to)
+
+
+def _facet_by_label_count(col, from_ = 'min', to = 'max'):
+    cnts = get_text_facets(col)
+    lbls_to_keep = [l for l, c in cnts if between(from_, to, c)]
+    return col.isin(lbls_to_keep)
+
+
+def facet_by_label_count(col, from_ = 'min', to = 'max'):
+    if isinstance(col, Intention):
+        return Intention(lambda df: _facet_by_label_count(col.evaluate(df), from_, to))
+    else: 
+        return _facet_by_label_count(col, from_, to)
