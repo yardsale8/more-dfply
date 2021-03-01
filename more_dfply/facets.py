@@ -1,8 +1,8 @@
-from dfply import symbolic_evaluation
+from dfply import make_symbolic
 from more_itertools import flatten
 from composable import pipeable
 
-@symbolic_evaluation
+@make_symbolic
 def text_filter(col, pattern, *, case=False, regex=False, na=False):
     """ Create a text filter column a search term or regular expression.
 
@@ -33,7 +33,7 @@ def get_text_facets(col):
     return [(l, v) for l, v in zip(cnts.index, cnts)]
 
 
-@symbolic_evaluation
+@make_symbolic
 def text_facet(col, *args):
     labels = [s for s in args if isinstance(s, str)] + [v for l in args if not isinstance(l, str) for v in l if isinstance(v, str)]
     return col.isin(labels) 
