@@ -1,5 +1,5 @@
 from more_dfply import __version__
-from more_dfply.more_dfply import fix_name, fix_names, maybe_tile, maybe_eval, any_intention, tiled_where, cond_eval, ifelse, maybe_combine, combine_all, arg_eval_and_combine, coalesce, case_when, col_zip, union_all
+from more_dfply.more_dfply import fix_name, fix_names, maybe_tile, maybe_eval, any_intention, tiled_where, cond_eval, ifelse, maybe_combine, coalesce, case_when, col_zip, union_all
 import pandas as pd
 import numpy as np
 from dfply import make_symbolic, pipe, symbolic_evaluation, Intention, dfpipe, rename, flatten, X
@@ -111,87 +111,6 @@ def test_maybe_combine():
     o2 = pd.Series([1, 2, 1, 2])
     assert equal_or_na(maybe_combine(s1, s2), o1)
     assert equal_or_na(maybe_combine(s1, s3), o2)
-    df = pd.DataFrame({'c1':[1,      2,      np.nan, np.nan],
-                       'c2':[np.nan, 1,      2,      np.nan],
-                       'c3':[np.nan, np.nan, 1,      2]})
-    assert equal_or_na(maybe_combine(X.c1, 
-                                     X.c2, 
-                                     maybe_eval(df)),
-                       o1)
-    assert equal_or_na(maybe_combine(X.c1, 
-                                     X.c3, 
-                                     maybe_eval(df)),
-                       o2)
-
-
-def test_combine_all():
-    equal_or_na = lambda s1, s2: ((s1 == s2) | pd.isna(s1)).all()
-    s1 = pd.Series([1,      2,      np.nan, np.nan])
-    s2 = pd.Series([np.nan, 1,      2,      np.nan])
-    s3 = pd.Series([np.nan, np.nan, 1,      2])
-    o1 = pd.Series([1, 2, 2, np.nan])
-    o2 = pd.Series([1, 2, 1, 2])
-    o3 = pd.Series([1, 2, 2, 2])
-    assert equal_or_na(combine_all([s1, s2]), o1)
-    assert equal_or_na(combine_all([s1, s3]), o2)
-    assert equal_or_na(combine_all([s1, s2, s3]), o3)
-    df = pd.DataFrame({'c1':[1,      2,      np.nan, np.nan],
-                       'c2':[np.nan, 1,      2,      np.nan],
-                       'c3':[np.nan, np.nan, 1,      2]})
-    assert equal_or_na(combine_all([X.c1, 
-                                    X.c2], 
-                                    maybe_eval(df)),
-                       o1)
-    assert equal_or_na(combine_all([X.c1, 
-                                    X.c3], 
-                                    maybe_eval(df)),
-                       o2)
-    assert equal_or_na(combine_all([X.c1, 
-                                    X.c2,
-                                    X.c3], 
-                                    maybe_eval(df)),
-                       o3)
-
-
-def test_arg_eval_and_combine():
-    equal_or_na = lambda s1, s2: ((s1 == s2) | pd.isna(s1)).all()
-    o1 = pd.Series([1, 2, 2, np.nan])
-    o2 = pd.Series([1, 2, 1, 2])
-    o3 = pd.Series([1, 2, 2, 2])
-    df = pd.DataFrame({'c1':[1,      2,      np.nan, np.nan],
-                       'c2':[np.nan, 1,      2,      np.nan],
-                       'c3':[np.nan, np.nan, 1,      2]})
-    assert equal_or_na(arg_eval_and_combine([X.c1, 
-                                             X.c2], 
-                                             df),
-                       o1)
-    assert equal_or_na(arg_eval_and_combine([X.c1, 
-                                             X.c3], 
-                                             df),
-                       o2)
-    assert equal_or_na(arg_eval_and_combine([X.c1, 
-                                             X.c2,
-                                             X.c3], 
-                                             df),
-                       o3)
-    # Test currying 
-    assert equal_or_na(arg_eval_and_combine([X.c1, 
-                                             X.c2])(df),
-                       o1)
-    assert equal_or_na(arg_eval_and_combine([X.c1, 
-                                             X.c3])(df),
-                       o2)
-    assert equal_or_na(arg_eval_and_combine([X.c1, 
-                                             X.c2,
-                                             X.c3])(df),
-                       o3)
-    # Test piping
-    assert equal_or_na(df >> arg_eval_and_combine([X.c1, X.c2]),
-                       o1)
-    assert equal_or_na(df >> arg_eval_and_combine([X.c1, X.c3]),
-                       o2)
-    assert equal_or_na(df >> arg_eval_and_combine([X.c1, X.c2, X.c3]),
-                       o3)
 
 
 def test_coalesce():
@@ -214,18 +133,34 @@ def test_case_when():
     equal_or_na = lambda s1, s2: ((s1 == s2) | pd.isna(s1)).all()
     df = pd.DataFrame({'cat':['a','a','b','b','b','c','c', 'd','d'],
                        'val':[ 1, 2, 1, 2, 3, 1, 2, 1, 2]})
+    sing1 = pd.Series(2*[1] + 7*[np.nan])
+    sing2 = pd.Series(2*[1] + 3*[2] + 4*[np.nan])
+    sing3 = pd.Series([1, 1, 3, 4, 5] + 4*[np.nan])
+    sing4 = pd.Series(2*[1] + 3*[2] + 4*[3])
     o1 = pd.Series([2, 3] + 7*[np.nan])
     o2 = pd.Series([2, 3, 3, 4, 5] + 4*[np.nan])
     o3 = pd.Series([2, 3, 3, 4, 5, 4, 5] + 2*[np.nan]) 
     assert equal_or_na(case_when((df.cat == 'a', df.val + 1)), 
                        o1)
+    assert equal_or_na(case_when((df.cat == 'a', 1)), 
+                       sing1)
     assert equal_or_na(case_when((df.cat == 'a',  df.val + 1), 
                                  (df.cat == 'b', df.val + 2)), 
                        o2)
+    assert equal_or_na(case_when((df.cat == 'a', 1), 
+                                 (df.cat == 'b', 2)), 
+                       sing2)
+    assert equal_or_na(case_when((df.cat == 'a', 1), 
+                                 (df.cat == 'b', df.val + 2)), 
+                       sing3)
     assert equal_or_na(case_when((df.cat == 'a', df.val + 1), 
                                  (df.cat == 'b', df.val + 2), 
                                  (df.cat == 'c', df.val + 3)), 
                        o3) 
+    assert equal_or_na(case_when((df.cat == 'a', 1), 
+                                 (df.cat == 'b', 2), 
+                                 (True, 3)), 
+                       sing4)
     assert equal_or_na(case_when((X.cat == 'a', 
                                   X.val + 1)).evaluate(df), 
                        o1)

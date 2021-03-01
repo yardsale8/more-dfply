@@ -22,10 +22,7 @@ __all__ = ("fix_names",
            "cond_eval",
            "ifelse",
            "maybe_combine",
-           "combine_all",
-           "arg_eval_and_combine",
            "coalesce",
-           "ifelse_and_coalesce",
            "case_when",
            "col_zip",
            "union_all",
@@ -90,13 +87,12 @@ def recode(col, d, default=None):
 
 
 @pipe
-@symbolic_evaluation(eval_as_selector=[1])
+@symbolic_evaluation(eval_as_selector=True)
 def set_index(df, col, drop = True):
     return df.set_index(col, drop = drop)
 
 
-@pipe
-@symbolic_evaluation
+@make_symbolic
 def row_index_slice(df, *args):
     assert len(args) in (1,2), "loc requires 1-2 arguments"
     if len(args) == 1:
@@ -104,14 +100,6 @@ def row_index_slice(df, *args):
     else:
         return df.loc[args[0]:args[1]]
     
-def get_length(col):
-    if (isinstance(col, str) # Treat strings as singletons
-        or not hasattr(col, '__len__') # Other singletons
-       ):
-        return 1
-    else:
-        return len(col)
-
 @pipeable
 def maybe_tile(n, col):
     if (isinstance(col, str) # Treat strings as singletons
@@ -158,54 +146,47 @@ def ifelse(cond, then, else_):
         return pd.Series(tiled_where(cond_out, then_out, else_out))
     return Intention(outfunc) if any_intention(cond, then, else_) else pd.Series(tiled_where(cond, then, else_))
 
-@pipeable
-def maybe_combine(acc, col, apply_first=identity):
-    acc = apply_first(acc)
-    return acc.combine_first(apply_first(col)) if acc.isna().any() else acc
+
+def maybe_combine(acc, col):
+    return acc.combine_first(col) if acc.isna().any() else acc
 
 
-def combine_all(args, apply_first=identity):
-    return reduce(maybe_combine(apply_first=apply_first), args)
-
-
-@pipeable
-def arg_eval_and_combine(args, df):
-    return combine_all(args, apply_first=maybe_eval(df))
-
-
+@make_symbolic
 def coalesce(*args):
-    return Intention(arg_eval_and_combine(args)) if any_intention(args) else combine_all(args)
+    return reduce(maybe_combine, args)
  
     
 
 # def ifelse_and_coalesce(args, apply_first=identity, default=np.nan):
 #     return coalesce(*[apply_first(ifelse(c, t, default)) for c, t in args])
 
+def get_length(col):
+    if (isinstance(col, str) # Treat strings as singletons
+        or not hasattr(col, '__len__') # Other singletons
+       ):
+        return 1
+    else:
+        return len(col)
 
-@pipeable
-def eval_and_case_when(args, df):
-    return ifelse_and_coalesce(args, apply_first=maybe_eval(df))
 
-def get_RHS(c, t, n, apply_first=identity):
-    case = apply_first(c)
-    then = apply_first(t)
-    if isinstance(c, bool) and c:
+
+def get_RHS(case, then, n):
+    if isinstance(case, bool) and case:
         return maybe_tile(n, then)
-    elif isinstance(c, bool):
+    elif isinstance(case, bool):
         return maybe_tile(n, np.nan)
     else:
         return ifelse(case, then, np.nan)
 
-def ifelse_and_coalesce(args, apply_first=identity):
-    lengths = ([get_length(apply_first(t)) for c, t in args] 
-                  + [get_length(apply_first(c)) for c, t in args])
+
+@make_symbolic
+def case_when(*args, default=np.nan):
+    lengths = ([get_length(t) for c, t in args] 
+              + [get_length(c) for c, t in args])
     n = max(lengths)
     assert all(l == 1 or l == n for l in lengths), "All LHS and RHS need to be singletons or the same length."
-    rhs = [get_RHS(c, t, n, apply_first=apply_first) for c, t in args]
+    rhs = [get_RHS(c, t, n) for c, t in args]
     return coalesce(*rhs)
-
-def case_when(*args, default=np.nan):
-    return Intention(eval_and_case_when(args)) if any_intention(args) else ifelse_and_coalesce(args)
 
 
 @make_symbolic
