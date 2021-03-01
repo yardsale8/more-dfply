@@ -134,17 +134,35 @@ def cond_eval(cond, expr, df):
     return maybe_eval(df, expr) if cond else None
 
 
+def symbolic_ifelse(cond, then, else_):
+    """ Returns a Series that is the same length as cond, picking elements from then and else_ 
+    based on the truth of cond.
+    
+    If then or else_ are instances of Intention, then they will only be evaluated when needed.
+    """
+    def outfunc(df): 
+        cond_out = maybe_eval(df, cond)
+        n = len(cond_out)
+        if cond_out.all():
+            return maybe_eval(df, then) >> maybe_tile(n)
+        elif not cond_out.any():
+            return maybe_eval(df, else_) >> maybe_tile(n)
+        else:
+            t = maybe_eval(df, then)
+            e = maybe_eval(df, else_)
+            return pd.Series(tiled_where(cond_out, t, e))
+    return Intention(outfunc)
+
+
 def ifelse(cond, then, else_):
     """ Returns a Series that is the same length as cond, picking elements from then and else_ 
         based on the truth of cond.
         
         If then or else_ are instances of Intention, then they will only be evaluated when needed."""
-    def outfunc(df): 
-        cond_out = maybe_eval(df, cond)
-        then_out = cond_eval(cond_out.any(), then, df)
-        else_out = cond_eval(not cond_out.all(), else_, df)
-        return pd.Series(tiled_where(cond_out, then_out, else_out))
-    return Intention(outfunc) if any_intention(cond, then, else_) else pd.Series(tiled_where(cond, then, else_))
+    if any_intention([cond, then, else_]):
+        return symbolic_ifelse(cond, then, else_)
+    else:
+        return pd.Series(tiled_where(cond, then, else_))
 
 
 def maybe_combine(acc, col):
