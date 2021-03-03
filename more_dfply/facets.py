@@ -1,6 +1,7 @@
 from dfply import make_symbolic
 from more_itertools import flatten
 from composable import pipeable
+from dfply.base import Intention
 
 @make_symbolic
 def text_filter(col, pattern, *, case=False, regex=False, na=False):
@@ -51,7 +52,7 @@ def _facet_by_label_count(col, from_ = 'min', to = 'max'):
 
 
 def facet_by_label_count(col, from_ = 'min', to = 'max'):
-    if isinstance(col, Intention):
+    if hasattr(col, 'evaluate'):
         return Intention(lambda df: _facet_by_label_count(col.evaluate(df), from_, to))
     else: 
         return _facet_by_label_count(col, from_, to)
