@@ -47,7 +47,7 @@ def _between(from_, to, val):
 
 def _facet_by_label_count(col, from_ = 'min', to = 'max'):
     cnts = get_text_facets(col)
-    lbls_to_keep = [l for l, c in cnts if between(from_, to, c)]
+    lbls_to_keep = [l for l, c in cnts if _between(from_, to, c)]
     return col.isin(lbls_to_keep)
 
 
